@@ -7,8 +7,8 @@
     <ProjectGuid>{2304CF58-50D7-4947-99E8-1E5F57DC8D0D}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ConsoleWeather</RootNamespace>
-    <AssemblyName>ConsoleWeather</AssemblyName>
+    <RootNamespace>ConsoleSnake</RootNamespace>
+    <AssemblyName>ConsoleSnake</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
