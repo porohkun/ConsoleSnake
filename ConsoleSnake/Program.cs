@@ -10,29 +10,28 @@ namespace ConsoleSnake
 {
     class Program
     {
-        static int _xPos = 10;
-        static int _yPos = 10;
-        static int _xPrev = 10;
-        static int _yPrev = 10;
-        static int _xSpd = 1;
-        static int _ySpd = 0;
+        static int _speed = 200 * 10000;
+        static Point _size = new Point(78, 22);
+        static Point _offset = new Point(1, 2);
 
-        static int _speed = 100 * 10000;
-        static int _width = 78;
-        static int _height = 22;
-        static int _xOff = 1;
-        static int _yOff = 2;
-        static int[,] _field = new int[_width, _height];
-        static int _score = 0;
+        static Random _rnd = new Random();
+        static Direction[,] _field = new Direction[_size.X, _size.Y];
+        static Point _pos = new Point(10, 10);
+        static Point _prevPos = new Point(10, 10);
+        static Direction _dir = Direction.East;
+        static int _score = 5;
+        static int _length = 1;
+        static Point _fruit;
+        static int _fruitSize = 0;
 
-        protected static void WriteAt(string s, int x, int y, bool withOffset = true)
+        protected static void WriteAt(string s, Point pos, bool withOffset = true)
         {
             try
             {
+                Point res = pos;
                 if (withOffset)
-                    Console.SetCursorPosition(x + _xOff, y + _yOff);
-                else
-                    Console.SetCursorPosition(x, y);
+                    res = pos + _offset;
+                Console.SetCursorPosition(res.X, res.Y);
                 Console.Write(s);
             }
             catch (ArgumentOutOfRangeException e)
@@ -46,20 +45,7 @@ namespace ConsoleSnake
         static void Main(string[] args)
         {
             Console.Clear();
-            WriteAt("╔",  - 1, - 1);
-            WriteAt("╗", _width , - 1);
-            WriteAt("╚",  -1, _height );
-            WriteAt("╝", _width , _height );
-            for (int x = 0; x < _width; x++)
-            {
-                WriteAt("═", x , -1);
-                WriteAt("═", x , _height );
-            }
-            for (int y = 0; y < _height; y++)
-            {
-                WriteAt("║",  - 1, y );
-                WriteAt("║", _width , y );
-            }
+            DrawRect(-Point.One, _size);
 
             long lastTick = 0;
 
@@ -68,31 +54,197 @@ namespace ConsoleSnake
                 if (Console.KeyAvailable)
                     switch (Console.ReadKey(true).Key)
                     {
-                        case ConsoleKey.UpArrow: _xSpd = 0; _ySpd = -1; break;
-                        case ConsoleKey.DownArrow: _xSpd = 0; _ySpd = 1; break;
-                        case ConsoleKey.LeftArrow: _xSpd = -1; _ySpd = 0; break;
-                        case ConsoleKey.RightArrow: _xSpd = 1; _ySpd = 0; break;
+                        case ConsoleKey.UpArrow: _dir = Direction.North; break;
+                        case ConsoleKey.DownArrow: _dir = Direction.South; break;
+                        case ConsoleKey.LeftArrow: _dir = Direction.West; break;
+                        case ConsoleKey.RightArrow: _dir = Direction.East; break;
                         case ConsoleKey.Escape: break;
                     }
                 if (DateTime.Now.Ticks - lastTick > _speed)
                 {
-                    _xPrev = _xPos;
-                    _yPrev = _yPos;
-                    _xPos += _xSpd;
-                    _yPos += _ySpd;
-                    if (_xPos >= _width) _xPos = _width-1;
-                    if (_xPos <= 0) _xPos = 0;
-                    if (_yPos >= _height) _yPos = _height-1;
-                    if (_yPos <= 0) _yPos = 0;
-                    WriteAt(" ", _xPrev , _yPrev );
-                    WriteAt("@", _xPos , _yPos );
-                    WriteAt(_score.ToString(), 0, 0, false);
+                    _field[_pos.X, _pos.Y] = _dir;
+                    _pos += _dir;
+
+                    if (!_pos.InRect(Point.Zero, _size))
+                        break;
+                    if (_field[_pos.X, _pos.Y] != Direction.None)
+                        break;
+
+                    if (_pos == _fruit)
+                    {
+                        _score += _fruitSize;
+                        _fruitSize = 0;
+                    }
+                    while (_fruitSize == 0)
+                    {
+                        _fruit = new Point(_rnd.Next(_size.X), _rnd.Next(_size.Y));
+                        if (_field[_fruit.X, _fruit.Y] == Direction.None)
+                            _fruitSize = _rnd.Next(10);
+                    }
+                    WriteAt(_fruitSize.ToString(), _fruit);
+
+                    if (_score == 0)
+                    {
+                        WriteAt(" ", _prevPos);
+                        var pp = _prevPos;
+                        _prevPos += _field[_prevPos.X, _prevPos.Y];
+                        _field[pp.X, pp.Y] = Direction.None;
+                    }
+                    else
+                    {
+                        _score--;
+                        _length++;
+                    }
+                    WriteAt("@", _pos);
+                    WriteAt(_score.ToString(), Point.Zero, false);
                     lastTick = DateTime.Now.Ticks;
                 }
 
             }
 
+            DrawRect(new Point(20, 8), new Point(57, 13), true);
+            WriteAt("GAME OVER!", new Point(34, 10));
+            WriteAt("Length: " + _length, new Point(34, 11));
+            Console.SetCursorPosition(0, 25);
+            Console.ReadKey();
         }
+
+        private static void DrawRect(Point min, Point max, bool fill = false)
+        {
+            WriteAt("╔", min);
+            WriteAt("╗", new Point(max.X, min.Y));
+            WriteAt("╚", new Point(min.X, max.Y));
+            WriteAt("╝", max);
+            for (int x = min.X + 1; x < max.X; x++)
+            {
+                WriteAt("═", new Point(x, min.Y));
+                WriteAt("═", new Point(x, max.Y));
+            }
+            for (int y = min.Y + 1; y < max.Y; y++)
+            {
+                WriteAt("║", new Point(min.X, y));
+                WriteAt("║", new Point(max.X, y));
+            }
+            if (fill)
+                for (int x = min.X + 1; x < max.X; x++)
+                    for (int y = min.Y + 1; y < max.Y; y++)
+                        WriteAt("-", new Point(x, y));
+        }
+    }
+
+    public enum Direction
+    {
+        None,
+        North,
+        South,
+        East,
+        West
+    }
+
+    public struct Point
+    {
+        public int X;
+        public int Y;
+
+        public static readonly Point Zero = new Point(0, 0);
+        public static readonly Point One = new Point(1, 1);
+
+        public Point(int x, int y)
+        {
+            this.X = x;
+            this.Y = y;
+        }
+
+        #region Методы
+
+        public void Crop(Point min, Point max)
+        {
+            X = Math.Min(Math.Max(X, min.X), max.X);
+            Y = Math.Min(Math.Max(Y, min.Y), max.Y);
+        }
+
+        public bool InRect(Point min, Point max)
+        {
+            if (X < min.X) return false;
+            if (Y < min.Y) return false;
+            if (X >= max.X) return false;
+            if (Y >= max.Y) return false;
+            return true;
+        }
+
+        public static double Distance(Point P1, Point P2)
+        {
+            return P1.DistanceTo(P2);
+        }
+
+        public double DistanceTo(Point P)
+        {
+            return Math.Sqrt((this.X - P.X) * (this.X - P.X) + (this.Y - P.Y) * (this.Y - P.Y));
+        }
+
+        #endregion
+
+        #region Переназначение операторов
+
+        public static bool operator ==(Point p1, Point p2)
+        {
+            return p1.X == p2.X && p1.Y == p2.Y;
+        }
+
+        public static bool operator !=(Point p1, Point p2)
+        {
+            return p1.X != p2.X || p1.Y != p2.Y;
+        }
+
+        public static Point operator +(Point p1, Point p2)
+        {
+            return new Point(p1.X + p2.X, p1.Y + p2.Y);
+        }
+
+        public static Point operator -(Point p1, Point p2)
+        {
+            return new Point(p1.X - p2.X, p1.Y - p2.Y);
+        }
+
+        public static Point operator -(Point p)
+        {
+            return new Point(-p.X, -p.Y);
+        }
+
+        public static Point operator +(Point p1, Direction dir)
+        {
+            int x = dir == Direction.East ? 1 : (dir == Direction.West ? -1 : 0);
+            int y = dir == Direction.South ? 1 : (dir == Direction.North ? -1 : 0);
+            return new Point(p1.X + x, p1.Y + y);
+        }
+
+        public static Point operator -(Point p1, Direction dir)
+        {
+            int x = dir == Direction.East ? -1 : (dir == Direction.West ? 1 : 0);
+            int y = dir == Direction.South ? -1 : (dir == Direction.North ? 1 : 0);
+            return new Point(p1.X + x, p1.Y + y);
+        }
+
+        #endregion
+
+        #region Object
+
+        public override bool Equals(object Point)
+        {
+            return this == (Point)Point;
+        }
+
+        public override int GetHashCode()
+        {
+            return X.GetHashCode() + Y.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return String.Format("[{0}; {1}]", X, Y);
+        }
+
+        #endregion
     }
 }
 
